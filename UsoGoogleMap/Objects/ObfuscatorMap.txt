@@ -1,0 +1,8 @@
+Este fichero contiene las variables renombradas con los originales.
+v5=showmap
+v6=poslat
+v7=poslong
+v0=scalelat
+vv1=scalelong
+vv2=googlemaps
+vv3=main

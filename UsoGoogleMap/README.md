@@ -1,0 +1,1 @@
+Prueba básica de app con integración de GoogleMaps, en la cual se añade de froma manual 4 puntos específicos
