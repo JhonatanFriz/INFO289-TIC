@@ -4,6 +4,6 @@ ModuleBreakpoints0=
 ModuleBreakpoints1=
 ModuleClosedNodes0=
 ModuleClosedNodes1=1
-NavigationStack=Main,BtnIngreso_Click,98,0,Main,Process_Globals,17,0,Main,Activity_Create,63,6,Main,Globals,25,6,Diseñador Visual,pantaResumenTotal.bal,-100,6,Main,CheckBoxDate_CheckedChange,218,6,Main,BtnInforme_Click,250,6,Main,calendarIni_Click,276,0,Main,calendarFin_Click,278,5,Main,MostrarCalendario,292,6
+NavigationStack=Main,ButtonIniciarSesion_Click,372,0,Main,CompletaSpinnerUsuarios,469,6,Main,BtnIngreso_Click,89,4,Main,ValidaSesion,494,6,Main,BtnGeneraTicket_Click,195,4,Main,Activity_Resume,80,0,Main,BtnInforme_Click,322,6,Main,Activity_Create,69,0,Diseñador Visual,pantaResumenTotal.bal,-100,1,Main,ButtonRegistrar_Click,376,0,Main,Globals,28,0
 SelectedBuild=0
 VisibleModules=1

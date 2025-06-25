@@ -1,0 +1,14 @@
+Este fichero contiene las variables renombradas con los originales.
+v5=serial1
+v6=timer1
+v7=canvasgrafico
+v0=datosldr
+vv1=datospot
+vv2=maxpuntos
+vv3=dibujargrafico
+vv4=btnsend
+vv5=txtsend
+vv6=btnconsular
+vv7=textreader1
+vv0=textwriter1
+vvv1=connected

@@ -1,16 +1,18 @@
-﻿Build1=Default,com.parquimetroV1
+﻿Build1=Default,com.parquimetroV2
 File1=Layout.bal
 File2=listaVehiculos.bal
 File3=main.bal
 File4=pantaIngreso.bal
 File5=pantaResumenTotal.bal
 File6=pantaTicket.bal
+File7=pantaUser.bal
 FileGroup1=Default Group
 FileGroup2=Default Group
 FileGroup3=Default Group
 FileGroup4=Default Group
 FileGroup5=Default Group
 FileGroup6=Default Group
+FileGroup7=Default Group
 Group=Default Group
 Library1=core
 Library2=sql
@@ -18,13 +20,13 @@ Library3=xui
 Library4=xui views
 ManifestCode='This code will be applied to the manifest file during compilation.~\n~'You do not need to modify it in most cases.~\n~'See this link for for more information: https://www.b4x.com/forum/showthread.php?p=78136~\n~AddManifestText(~\n~<uses-sdk android:minSdkVersion="21" android:targetSdkVersion="34"/>~\n~<supports-screens android:largeScreens="true" ~\n~    android:normalScreens="true" ~\n~    android:smallScreens="true" ~\n~    android:anyDensity="true"/>)~\n~SetApplicationAttribute(android:icon, "@drawable/icon")~\n~SetApplicationAttribute(android:label, "$LABEL$")~\n~CreateResourceFromFile(Macro, Themes.LightTheme)~\n~'End of default text.~\n~
 Module1=Starter
-NumberOfFiles=6
+NumberOfFiles=7
 NumberOfLibraries=4
 NumberOfModules=1
 Version=13.1
 @EndOfDesignText@
 #Region  Project Attributes 
-	#ApplicationLabel: ParquimetroV1
+	#ApplicationLabel: ParquimetroV2
 	#VersionCode: 1
 	#VersionName: 
 	'SupportedOrientations possible values: unspecified, landscape or portrait.
@@ -47,12 +49,18 @@ End Sub
 Sub Globals
 	Dim Mi_Cursor As Cursor
 	Dim TabHost1 As TabHost
+	Private SpinnerUsuarios As Spinner
 	Private EditTextPatente, EditTextTicket, EditTextDateIni, EditTextDateFin As EditText
-	Private BtnIngreso, BtnListar, BtnGeneraTicket, BtnInforme, calendarIni, calendarFin As Button
-	Private Label1, InfoTicket, LabelActivos, LabelTotal, LabelPorDia As Label
+	Private EditTextNombre, EditTextClave, EditTextRut As EditText
+	Private ButtonRegistrar, ButtonIniciarSesion As Button
+	Private BtnIngreso, BtnListar, BtnGeneraTicket, BtnInforme, calendarIni, calendarFin, ButtonLogout As Button
+	Private Label1, InfoTicket, LabelActivos, LabelTotal, LabelPorDia, LabelUsuarioActivo As Label
+	Private LabelSesion, LabelRegistro As Label
 	Private ListView1, ListView2, ListViewResumen As ListView
-	Private CheckBoxActivos, CheckboxDate As CheckBox
+	Private CheckBoxActivos, CheckboxDate, CheckboxSesion, CheckboxRegistro As CheckBox
 	
+	Private UsuarioActivoID As Int = -1
+	Private UsuarioActivoNombre As String = ""
 	Private dialog As B4XDialog
 	Private dateTemplate As B4XDateTemplate
 	Private fechaSeleccionada As String
@@ -62,20 +70,23 @@ End Sub
 Sub Activity_Create(FirstTime As Boolean)
 	Activity.LoadLayout("main")
 	Activity.Title = "Parquímetro"
+	TabHost1.AddTab("Usuarios", "pantaUser")
 	TabHost1.AddTab("Ingreso", "pantaIngreso")
 	TabHost1.AddTab("Listado", "listaVehiculos")
 	TabHost1.AddTab("Ticket", "pantaTicket")
 	TabHost1.AddTab("Resumen", "pantaResumenTotal")
 	
+	VerifyCheckboxes
 	
 	If FirstTime Then
 		'Inicialización de la base de datos
-		Mi_DB.Initialize(File.DirInternal,"ParquimetroV04.db",True)
+		Mi_DB.Initialize(File.DirInternal,"ParquimetroFinal.db",True)
 		'Creación de una tabla
 		Mi_DB.BeginTransaction
 		Try
-			Mi_DB.ExecNonQuery("CREATE TABLE IF NOT EXISTS Vehiculos (id_dato INTEGER PRIMARY KEY AUTOINCREMENT, fecha TEXT, hora TEXT, patente TEXT, isActive INTEGER)")
-			Mi_DB.ExecNonQuery("CREATE TABLE IF NOT EXISTS Pagos (id_pago INTEGER PRIMARY KEY AUTOINCREMENT, id_dato INTEGER, salida_fecha TEXT, salida_hora TEXT, monto INTEGER, FOREIGN KEY (id_dato) REFERENCES Vehiculos(id_dato))")
+			Mi_DB.ExecNonQuery("CREATE TABLE IF NOT EXISTS Vehiculos (id_dato INTEGER PRIMARY KEY AUTOINCREMENT, fecha TEXT, hora TEXT, patente TEXT, isActive INTEGER, id_usuario INTEGER)")
+			Mi_DB.ExecNonQuery("CREATE TABLE IF NOT EXISTS Pagos (id_pago INTEGER PRIMARY KEY AUTOINCREMENT, id_dato INTEGER, salida_fecha TEXT, salida_hora TEXT, monto INTEGER, id_usuario INTEGER, FOREIGN KEY (id_dato) REFERENCES Vehiculos(id_dato))")
+			Mi_DB.ExecNonQuery("CREATE TABLE IF NOT EXISTS Usuarios (id_usuario INTEGER PRIMARY KEY AUTOINCREMENT, nombre TEXT, rut Text UNIQUE, clave TEXT)")
 			Mi_DB.TransactionSuccessful
 			ToastMessageShow("Base de datos creada",True)
 		Catch
@@ -87,10 +98,12 @@ Sub Activity_Create(FirstTime As Boolean)
 	dialog.Initialize(Activity)
 	dateTemplate.Initialize
 	dateTemplate.FirstDay = 1
+	CompletaSpinnerUsuarios
 End Sub
 
 Sub Activity_Resume
-
+	MostrarSesion
+	CompletaSpinnerUsuarios
 End Sub
 
 Sub Activity_Pause (UserClosed As Boolean)
@@ -100,11 +113,15 @@ End Sub
 
 
 Private Sub BtnIngreso_Click
+	If Not(ValidaSesion) Then
+		EditTextPatente.Text = ""
+		Return
+	End If
+	
 	If EditTextPatente.Text<>"" Then
 		'Sentencia de Ingreso del dato del usuario a la base de datos
 		Mi_DB.BeginTransaction
 		Try
-			Dim fechaEntrada, horaEntrada As String
 			Dim dtEntrada As Long = DateTime.Now
 			DateTime.DateFormat = "dd/MM/yyyy"
 			DateTime.TimeFormat = "HH:mm:ss"
@@ -112,7 +129,7 @@ Private Sub BtnIngreso_Click
 			Log("Hora: " & DateTime.Time(dtEntrada))
 
 			Log("dtEntrada al INGRESO "&dtEntrada)
-			Mi_DB.ExecNonQuery2("INSERT INTO Vehiculos (fecha, hora, patente, isActive) VALUES (?,?,?,?)", Array As String(DateTime.Date(dtEntrada), DateTime.Time(dtEntrada), EditTextPatente.Text.ToUpperCase,1))
+			Mi_DB.ExecNonQuery2("INSERT INTO Vehiculos (fecha, hora, patente, isActive, id_usuario) VALUES (?,?,?,?,?)", Array As Object(DateTime.Date(dtEntrada), DateTime.Time(dtEntrada), EditTextPatente.Text.ToUpperCase,1, UsuarioActivoID))
 			Mi_DB.TransactionSuccessful
 			ToastMessageShow("Vehiculo ingresado", False)
 		Catch
@@ -166,6 +183,11 @@ Private Sub BtnListar_Click
 End Sub
 
 Private Sub BtnGeneraTicket_Click
+	If Not(ValidaSesion) Then 
+		EditTextTicket.Text = ""
+		Return
+	End If
+	
 	If EditTextTicket.Text<>"" Then
 		Try
 			Mi_Cursor = Mi_DB.ExecQuery2("SELECT id_dato, fecha, hora FROM Vehiculos WHERE patente = ? AND  isActive = 1 LIMIT 1", _
@@ -181,17 +203,24 @@ Private Sub BtnGeneraTicket_Click
 			Dim horaEntrada As String = Mi_Cursor.GetString("hora")
 			Dim id_dato As Int = Mi_Cursor.GetInt("id_dato")
 
-			Log("Fecha entrada TICKET: " & fechaEntrada)
-			Log("Hora entrada TICKET: " & horaEntrada)
 			DateTime.DateFormat = "dd/MM/yyyy"
 			DateTime.TimeFormat = "HH:mm:ss"
 			
-			Dim desfaseZonaHoraria As Long = 4 * 60* DateTime.TicksPerMinute
-			Dim baseFecha As Long = DateTime.DateParse(fechaEntrada)
-			Dim horaMilis As Long = (DateTime.TimeParse(horaEntrada) Mod DateTime.TicksPerDay) - desfaseZonaHoraria
+			Log("Fecha entrada TICKET: " & fechaEntrada)
+			Log("Hora entrada TICKET: " & horaEntrada)
+			Dim partesFecha() As String = Regex.Split("/", fechaEntrada)
+			Dim partesHora() As String = Regex.Split(":", horaEntrada)
 
-			Dim dtEntrada As Long = baseFecha + horaMilis
-'			Dim dtEntrada As Long = DateTime.DateParse(fechaEntrada) + DateTime.TimeParse(horaEntrada)
+			Dim año As Int = partesFecha(2)
+			Dim mes As Int = partesFecha(1)
+			Dim dia As Int = partesFecha(0)
+
+			Dim hora As Int = partesHora(0)
+			Dim minuto As Int = partesHora(1)
+			Dim segundo As Int = partesHora(2)
+
+			Dim dtEntrada As Long = DateUtils.SetDateAndTime(año, mes, dia, hora, minuto, segundo)
+
 			Log("d Entrada "&dtEntrada)
 			Dim dtSalida As Long = DateTime.Now
 			Dim minutos As Int = Round((dtSalida - dtEntrada) / DateTime.TicksPerMinute)
@@ -211,7 +240,9 @@ Private Sub BtnGeneraTicket_Click
 							"RUT: 00.000.000-0" & CRLF & _
 							"" & CRLF & _
 							"----------------- DATOS VEHICULO -----------------" & CRLF & _
+							"" & CRLF & _
 							" PATENTE: " & EditTextTicket.Text & CRLF & _
+							"" & CRLF & _
 							"--------------- INGRESO ---------------" & CRLF & _
 							"" & CRLF & _
 							"Fecha : " & fechaEntrada & "  Hora : " & horaEntrada &CRLF & _
@@ -219,10 +250,11 @@ Private Sub BtnGeneraTicket_Click
 							"----------------- SALIDA -----------------" & CRLF & _
 							"" & CRLF & _
 							"Fecha : " & DateTime.Date(dtSalida) & "  Hora : " & DateTime.Time(dtSalida) &CRLF & _
+							"" & CRLF & _
 							"Tiempo: " & minutos & " minutos"&CRLF & _
 							"Monto: $" & montoPago
 			' Inserta el monto a tabla pagos
-			Mi_DB.ExecNonQuery2("INSERT INTO Pagos (id_dato, salida_fecha, salida_hora, monto) VALUES (?,?,?,?)", Array As Object(id_dato, DateTime.Date(dtSalida), DateTime.Time(dtSalida), montoPago))
+			Mi_DB.ExecNonQuery2("INSERT INTO Pagos (id_dato, salida_fecha, salida_hora, monto, id_usuario) VALUES (?,?,?,?,?)", Array As Object(id_dato, DateTime.Date(dtSalida), DateTime.Time(dtSalida), montoPago, UsuarioActivoID))
 			
 			'Marca vehiculo como retirado (isActive cambia de estado a 0)
 			Mi_DB.ExecNonQuery2("UPDATE Vehiculos SET isActive = 0 WHERE id_dato = ?", Array As Object(id_dato))
@@ -256,35 +288,66 @@ Private Sub BtnInforme_Click
 		ToastMessageShow("Ingrese fecha", True)
 		Return
 	End If
-	Dim totalRecaudado As Int = 0
 	
+	Dim totalRecaudado As Int = 0
+	Dim usuarioSeleccionado As String = SpinnerUsuarios.SelectedItem
+	Dim filtroPorUsuario As Boolean = (usuarioSeleccionado <> "Todos")
+	Dim idSeleccionado As Int = -1
+	
+	If filtroPorUsuario Then
+		Mi_Cursor = Mi_DB.ExecQuery2("SELECT id_usuario FROM Usuarios WHERE rut = ?", Array As String (usuarioSeleccionado))
+		If Mi_Cursor.RowCount > 0 Then
+			Mi_Cursor.Position = 0
+			idSeleccionado = Mi_Cursor.GetInt("id_usuario")
+		End If
+		Mi_Cursor.Close
+	End If
 	Try
-		'	Dim fechaValida As Long = DateTime.DateParse(fechaBusqueda)
+		Dim query As String
+		Dim args As List
+		args.Initialize
+		
 		If CheckboxDate.Checked Then
-			Mi_Cursor = Mi_DB.ExecQuery2("SELECT v.patente, p.salida_hora, p.monto FROM Pagos p INNER JOIN Vehiculos v ON v.id_dato = p.id_dato WHERE p.salida_fecha = ?", Array As String(fechaInicio))
+			query = "SELECT u.rut, v.patente, p.salida_fecha, p.monto FROM Pagos p INNER JOIN Vehiculos v ON v.id_dato = p.id_dato INNER JOIN Usuarios u ON u.id_usuario = p.id_usuario WHERE p.salida_fecha = ?"
+			args.Add(fechaInicio)
 		Else
 			If fechaFin = "" Then
 				ToastMessageShow("Ingrese fecha final", True)
 				Return
 			End If
-			Mi_Cursor = Mi_DB.ExecQuery2("SELECT v.patente, p.salida_hora, p.monto FROM Pagos p INNER JOIN Vehiculos v ON v.id_dato = p.id_dato WHERE p.salida_fecha BETWEEN ? AND ?", Array As String(fechaInicio, fechaFin))
+			query = "SELECT u.rut, v.patente, p.salida_fecha, p.monto FROM Pagos p INNER JOIN Vehiculos v ON v.id_dato = p.id_dato INNER JOIN Usuarios u ON u.id_usuario = p.id_usuario WHERE p.salida_fecha BETWEEN ? AND ?"
+			args.Add(fechaInicio)
+			args.Add(fechaFin)
 		End If
+		
+		If filtroPorUsuario Then
+			query = query & "AND p.id_usuario = ?"
+			args.Add(idSeleccionado)
+		End If
+		Dim param(args.Size) As String
+		For i = 0 To args.Size -1
+			param(i) = args.Get(i)
+		Next
+		Mi_Cursor = Mi_DB.ExecQuery2(query,param)
+
+
+		
 		If Mi_Cursor.RowCount = 0 Then
 			ListViewResumen.AddSingleLine("Sin resultados en ese rango")
 		Else 
-			ListViewResumen.AddSingleLine("PATENTE   |  Hora Salida   | Monto ")
+			ListViewResumen.AddSingleLine("RUT| PATENTE | fecha Salida  | Monto ")
 			For i = 0 To Mi_Cursor.RowCount - 1
 				Mi_Cursor.Position = i
 				Dim monto As Int = Mi_Cursor.GetInt("monto")
 				totalRecaudado = totalRecaudado + monto
-				Dim linea As String = Mi_Cursor.GetString("patente") & " | " & _
-										Mi_Cursor.GetString("salida_hora") & " | " & _
+				Dim linea As String =   Mi_Cursor.GetString("rut") & " | " & _
+										Mi_Cursor.GetString("patente") & " | " & _
+										Mi_Cursor.GetString("salida_fecha") & " | " & _
 										monto
 				ListViewResumen.AddSingleLine(linea)
 				
 			Next
 			LabelTotal.Text= " Total recaudado: " & totalRecaudado
-			'LabelTotal.Text= "Cantidad de vehiculos: "& cantidadVehiculos & " Total recaudado: " & totalRecaudado
 		End If
 		Mi_Cursor.Close
 	Catch
@@ -315,4 +378,165 @@ Private Sub MostrarCalendario
 			EditTextDateFin.Text = fechaElegida
 		End If
 	End If
+End Sub
+
+Private Sub ButtonRegistrar_Click
+	Dim nombre As String = EditTextNombre.Text.Trim
+	Dim rut As String = EditTextRut.Text.Trim
+	Dim clave As String = EditTextClave.Text.Trim
+	
+	If nombre = "" Or clave = "" Or rut = "" Then
+		ToastMessageShow("Ingresar nombre, Rut y clave", True)
+		Return
+	End If
+	
+	Mi_Cursor = Mi_DB.ExecQuery2("SELECT 1 FROM Usuarios WHERE rut = ? LIMIT 1", Array As String(rut))
+	If Mi_Cursor.RowCount > 0 Then
+		ToastMessageShow("Usuario ya registrado", True)
+		Mi_Cursor.Close
+		Return
+	End If
+	Mi_Cursor.Close
+	
+	Try
+		Mi_DB.ExecNonQuery2("INSERT INTO Usuarios (nombre, rut, clave) VALUES (?,?,?)", Array As String(nombre, rut, clave))
+		ToastMessageShow("Usuario registrado", True)
+		CompletaSpinnerUsuarios
+		EditTextRut.Text = ""
+		EditTextClave.Text = ""
+		EditTextNombre.Text = ""
+	Catch
+		ToastMessageShow("ERROR: "& LastException.Message, True)
+		Log(LastException)
+	End Try
+	
+
+	
+End Sub
+
+
+
+Private Sub ButtonIniciarSesion_Click
+	Dim rut As String = EditTextRut.Text.Trim
+	Dim clave As String = EditTextClave.Text.Trim
+	
+	If rut = "" Or clave = "" Then
+		ToastMessageShow("Ingrese rut y contraseña", True)
+		Return
+	End If
+	
+	Try
+		Mi_Cursor = Mi_DB.ExecQuery2("SELECT id_usuario, nombre FROM Usuarios WHERE rut = ? AND clave = ?", Array As String (rut, clave))
+		
+		If Mi_Cursor.RowCount > 0 Then
+			ControlesDeSesion(False)
+			Mi_Cursor.Position = 0
+			UsuarioActivoID = Mi_Cursor.GetInt("id_usuario")
+			Dim nombre As String = Mi_Cursor.GetString("nombre")
+			ToastMessageShow("Bienvenido " & nombre, True)
+			UsuarioActivoNombre = nombre
+			'Activity.RemoveAllViews
+			TabHost1.CurrentTab = 1
+			MostrarSesion
+			EditTextRut.Text = ""
+			EditTextClave.Text = ""
+		Else
+			ToastMessageShow("Credenciales incorrectas", True)
+		End If
+		Mi_Cursor.Close
+	Catch
+		ToastMessageShow("ERRORRRR", True)
+		Log(LastException)
+	End Try
+End Sub
+
+Private Sub CheckBoxSesion_CheckedChange(Checked As Boolean)
+	If Checked Then
+		CheckboxRegistro.Checked = False
+		EditTextNombre.Visible = False
+		EditTextRut.Visible = True
+		EditTextClave.Visible = True
+		ButtonRegistrar.Visible = False
+		ButtonIniciarSesion.Visible = True
+	Else
+		VerifyCheckboxes
+	End If
+End Sub
+
+Private Sub CheckBoxRegistro_CheckedChange(Checked As Boolean)
+	If Checked Then
+		CheckboxSesion.Checked = False
+		EditTextNombre.Visible = True
+		EditTextRut.Visible = True
+		EditTextClave.Visible = True
+		ButtonRegistrar.Visible = True
+		ButtonIniciarSesion.Visible = False
+	Else
+		VerifyCheckboxes
+	End If
+End Sub
+
+Private Sub VerifyCheckboxes()
+	If CheckboxSesion.Checked = False And CheckboxRegistro.Checked = False Then
+		EditTextNombre.Visible = False
+		EditTextRut.Visible = False
+		EditTextClave.Visible = False
+		ButtonRegistrar.Visible = False
+		ButtonIniciarSesion.Visible = False
+	End If
+End Sub
+
+Private Sub MostrarSesion
+	If UsuarioActivoID <> -1 Then
+		LabelUsuarioActivo.Text = "Usuario: " & UsuarioActivoNombre
+		Log(UsuarioActivoNombre)
+		Log(UsuarioActivoID)
+		LabelUsuarioActivo.Visible = True
+		ButtonLogout.Visible = True
+		
+	Else
+		LabelUsuarioActivo.Text = "Sin sesión activa"
+		LabelUsuarioActivo.Visible = True
+		ButtonLogout.Visible = False
+		
+	End If
+End Sub
+
+Private Sub ButtonLogout_Click
+	UsuarioActivoID = -1
+	UsuarioActivoNombre = ""
+	MostrarSesion
+	TabHost1.CurrentTab = 0
+	ControlesDeSesion(True)
+End Sub
+
+Private Sub ControlesDeSesion(visible As Boolean)
+	ButtonIniciarSesion.Visible = visible
+	ButtonRegistrar.Visible = visible
+	CheckboxSesion.Visible = visible
+	CheckboxRegistro.Visible = visible
+	EditTextRut.Visible = visible
+	EditTextClave.Visible = visible
+	EditTextNombre.Visible = visible
+End Sub
+
+Private Sub ValidaSesion As Boolean
+	If UsuarioActivoID = -1 Then
+		ToastMessageShow("Debe iniciar sesión", True)
+		TabHost1.CurrentTab = 0
+		Return False
+	Else
+		Return True
+	End If
+End Sub
+
+Private Sub CompletaSpinnerUsuarios
+	SpinnerUsuarios.Clear
+	SpinnerUsuarios.Add("Todos")
+	Mi_Cursor = Mi_DB.ExecQuery("SELECT rut FROM Usuarios ORDER BY rut")
+	For i = 0 To Mi_Cursor.RowCount - 1
+		Mi_Cursor.Position = i
+		SpinnerUsuarios.Add(Mi_Cursor.GetString("rut"))
+	Next
+	Mi_Cursor.Close
 End Sub

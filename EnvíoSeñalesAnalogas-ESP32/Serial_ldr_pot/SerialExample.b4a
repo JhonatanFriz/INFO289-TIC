@@ -1,0 +1,237 @@
+﻿Build1=Default,anywheresoftware.b4a.samples.serial
+File1=1.bal
+File2=2.bal
+FileGroup1=Default Group
+FileGroup2=Default Group
+Group=Default Group
+Library1=core
+Library2=serial
+Library3=sql
+ManifestCode='This code will be applied to the manifest file during compilation.~\n~'You do not need to modify it in most cases.~\n~'See this link for for more information: http://www.b4x.com/forum/showthread.php?p=78136~\n~AddManifestText(~\n~<uses-sdk android:minSdkVersion="27" />~\n~<supports-screens android:largeScreens="true" ~\n~    android:normalScreens="true" ~\n~    android:smallScreens="true" ~\n~    android:anyDensity="true"/>)~\n~SetApplicationAttribute(android:icon, "@drawable/icon")~\n~SetApplicationAttribute(android:label, "$LABEL$")~\n~'End of default text.~\n~
+NumberOfFiles=2
+NumberOfLibraries=3
+NumberOfModules=0
+Version=13.1
+@EndOfDesignText@
+#Region Module Attributes
+	#FullScreen: False
+	#IncludeTitle: True
+	#ApplicationLabel: Serial_LdrPot
+	#VersionCode: 1
+	#VersionName: 
+	#SupportedOrientations: unspecified
+#End Region
+
+'Activity module
+Sub Process_Globals
+	Dim Serial1 As Serial
+	Dim TextReader1 As TextReader
+	Dim TextWriter1 As TextWriter
+	Dim Timer1 As Timer
+	Dim connected As Boolean
+
+	Dim Mi_DB As SQL
+End Sub
+
+Sub Globals
+	Dim btnSend As Button
+	Dim txtLog As EditText
+	Dim txtSend As EditText
+	Dim label1 , label2 , label3 As Label
+	Dim canvasGrafico As Canvas
+	Dim datosLDR As List
+	Dim datosPOT As List
+	Dim maxPuntos As Int = 10
+	Private PanelGrafico As Panel
+	Private ListView1 As ListView
+	Private BtnConsular As Button
+	Dim Mi_Cursor As Cursor
+	
+End Sub
+
+Sub Activity_Create(FirstTime As Boolean)
+	If FirstTime Then
+		Serial1.Initialize("Serial1")
+		Timer1.Initialize("Timer1", 200)
+	End If
+	Activity.LoadLayout("1")
+	Activity.AddMenuItem("Connect", "mnuConnect")
+	Activity.AddMenuItem("Disconnect", "mnuDisconnect")
+	
+	If FirstTime Then
+		'Inicialización de la base de datos
+		Mi_DB.Initialize(File.DirInternal,"Serial05.db",True)
+		'Creación de una tabla
+		Mi_DB.BeginTransaction
+		Try
+			Mi_DB.ExecNonQuery("CREATE TABLE IF NOT EXISTS Lecturas (id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp DateTime, ldr INTEGER, pot INTEGER)")
+			Mi_DB.TransactionSuccessful
+			ToastMessageShow("Base de datos creada",True)
+		Catch
+			Log("ERROR de Creacion base de datos: "&LastException.Message)
+		End Try
+		Mi_DB.EndTransaction
+	End If
+	
+	canvasGrafico.Initialize(PanelGrafico)
+	datosLDR.Initialize
+	datosPOT.Initialize
+	
+	Try
+		Dim idMax As Int
+		Dim curMax As Cursor = Mi_DB.ExecQuery("SELECT MAX(id) as max_id FROM Lecturas")
+		If curMax.RowCount > 0 Then
+			curMax.Position = 0
+			idMax = curMax.GetInt("max_id")
+		End If
+		curMax.Close
+
+		Dim idDesde As Int = Max(idMax - maxPuntos, 1)
+
+		' Cargar últimos registros al iniciar
+		Mi_Cursor = Mi_DB.ExecQuery("SELECT * FROM Lecturas WHERE id >= " & idDesde & " ORDER BY id ASC")
+		For i = 0 To Mi_Cursor.RowCount - 1
+			Mi_Cursor.Position = i
+			datosLDR.Add(Mi_Cursor.GetInt("ldr"))
+			datosPOT.Add(Mi_Cursor.GetInt("pot"))
+		Next
+		Mi_Cursor.Close
+
+		DibujarGrafico
+
+	Catch
+		Log("Error al cargar datos iniciales: " & LastException.Message)
+	End Try
+
+End Sub
+Sub Activity_Resume
+	If Serial1.IsEnabled = False Then
+		ToastMessageShow("Please enable Bluetooth.", "")
+	Else
+		Serial1.Listen 'listen for incoming connections
+	End If
+End Sub
+Sub mnuConnect_Click
+	Dim PairedDevices As Map
+	PairedDevices = Serial1.GetPairedDevices
+	Dim l As List
+	l.Initialize
+	For i = 0 To PairedDevices.Size - 1
+		l.Add(PairedDevices.GetKeyAt(i))
+	Next
+	Dim res As Int
+	res = InputList(l, "Choose device", -1) 'show list with paired devices
+	If res <> DialogResponse.CANCEL Then
+		Serial1.Connect(PairedDevices.Get(l.Get(res))) 'convert the name to mac address
+	End If
+End Sub
+
+Sub Serial1_Connected (Success As Boolean)
+	If Success Then
+		ToastMessageShow("Connected successfully", False)
+		TextReader1.Initialize(Serial1.InputStream)
+		TextWriter1.Initialize(Serial1.OutputStream)
+		Timer1.Enabled = True
+		connected = True
+	Else
+		connected = False
+		Timer1.Enabled = False
+		ToastMessageShow(LastException.Message, "Error connecting.")
+	End If
+End Sub
+Sub mnuDisconnect_Click
+	Serial1.Disconnect
+	connected = False
+End Sub
+
+Sub Activity_Pause (UserClosed As Boolean)
+
+End Sub
+
+
+Sub Timer1_Tick
+	'puede leer por dato:  texto mas dadto, solo dato y un string con varios datos
+	' este ultimo requiere separar los datos y usa split
+	
+	'dim rst() as string
+	'temp = "Ravi,Hari,Raman,Anitha,Vinod"
+	' rst = Split(temp,",")
+	
+	If connected Then
+		If TextReader1.Ready Then 'check if there is any data waiting to be read
+			Dim partes() As String = Regex.Split(",", TextReader1.ReadLine.Replace(";", ""))
+			Dim ldr As Int = partes(0)
+			Dim pot As Int = partes(1)
+			'datosLDR.Add(ldr)
+			'datosPOT.Add(pot)
+			' Crear una marca de tiempo en formato "YYYY-MM-DD HH:MM:SS"
+			Dim timeNow As Long = DateTime.Now
+			Dim timestamp As String = DateTime.Date(timeNow) & " " & DateTime.Time(timeNow)
+			Try
+				' Leer desde Bluetooth
+				Dim partes() As String = Regex.Split(",", TextReader1.ReadLine.Replace(";", ""))
+				Dim ldr As Int = partes(0)
+				Dim pot As Int = partes(1)
+
+				' Crear timestamp y guardar en BD
+				Dim timeNow As Long = DateTime.Now
+				Dim timestamp As String = DateTime.Date(timeNow) & " " & DateTime.Time(timeNow)
+				Mi_DB.ExecNonQuery2("INSERT INTO Lecturas (timestamp, ldr, pot) VALUES (?, ?, ?)", Array As Object(timestamp, ldr, pot))
+
+				' Obtener solo el último dato insertado
+				Dim cur As Cursor = Mi_DB.ExecQuery("SELECT * FROM Lecturas ORDER BY id DESC LIMIT 1")
+				If cur.RowCount > 0 Then
+					cur.Position = 0
+					Dim ultimoLDR As Int = cur.GetInt("ldr")
+					Dim ultimoPOT As Int = cur.GetInt("pot")
+
+					datosLDR.Add(ultimoLDR)
+					datosPOT.Add(ultimoPOT)
+
+					If datosLDR.Size > maxPuntos Then datosLDR.RemoveAt(0)
+					If datosPOT.Size > maxPuntos Then datosPOT.RemoveAt(0)
+
+					label2.Text = "LDR: " & ultimoLDR
+					label3.Text = "POT: " & ultimoPOT
+				End If
+				cur.Close
+
+				DibujarGrafico
+
+			Catch
+				Log("Error en Timer1_Tick: " & LastException.Message)
+			End Try
+			txtLog.Text = txtLog.Text & TextReader1.ReadLine & CRLF
+			DibujarGrafico
+			Mi_Cursor.Close
+			'label2.text=TextReader1.ReadLine
+			'label3.text=TextReader1.ReadLine
+			'label2.text=ldr
+			'label3.text=pot
+			'txtLog.Text = txtLog.Text & TextReader1.ReadLine & CRLF
+			'txtLog.SelectionStart = txtLog.Text.Length
+		End If
+	End If
+End Sub
+
+Sub DibujarGrafico
+	canvasGrafico.DrawColor(Colors.White)
+
+	Dim ancho As Int = PanelGrafico.Width
+	Dim alto As Int = PanelGrafico.Height
+	Dim escalaY As Float = alto / 4095.0
+	Dim escalaX As Float = ancho / maxPuntos
+
+	For i = 1 To datosLDR.Size - 1
+		Dim x1 As Float = (i - 1) * escalaX
+		Dim x2 As Float = i * escalaX
+		Dim y1_ldr As Float = alto - (datosLDR.Get(i - 1) * escalaY)
+		Dim y2_ldr As Float = alto - (datosLDR.Get(i) * escalaY)
+		Dim y1_pot As Float = alto - (datosPOT.Get(i - 1) * escalaY)
+		Dim y2_pot As Float = alto - (datosPOT.Get(i) * escalaY)
+
+		canvasGrafico.DrawLine(x1, y1_ldr, x2, y2_ldr, Colors.Blue, 4dip)
+		canvasGrafico.DrawLine(x1, y1_pot, x2, y2_pot, Colors.Red, 4dip)
+	Next
+	PanelGrafico.Invalidate 'Refresca
+End Sub
