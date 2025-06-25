@@ -1,0 +1,318 @@
+﻿Build1=Default,com.parquimetroV1
+File1=Layout.bal
+File2=listaVehiculos.bal
+File3=main.bal
+File4=pantaIngreso.bal
+File5=pantaResumenTotal.bal
+File6=pantaTicket.bal
+FileGroup1=Default Group
+FileGroup2=Default Group
+FileGroup3=Default Group
+FileGroup4=Default Group
+FileGroup5=Default Group
+FileGroup6=Default Group
+Group=Default Group
+Library1=core
+Library2=sql
+Library3=xui
+Library4=xui views
+ManifestCode='This code will be applied to the manifest file during compilation.~\n~'You do not need to modify it in most cases.~\n~'See this link for for more information: https://www.b4x.com/forum/showthread.php?p=78136~\n~AddManifestText(~\n~<uses-sdk android:minSdkVersion="21" android:targetSdkVersion="34"/>~\n~<supports-screens android:largeScreens="true" ~\n~    android:normalScreens="true" ~\n~    android:smallScreens="true" ~\n~    android:anyDensity="true"/>)~\n~SetApplicationAttribute(android:icon, "@drawable/icon")~\n~SetApplicationAttribute(android:label, "$LABEL$")~\n~CreateResourceFromFile(Macro, Themes.LightTheme)~\n~'End of default text.~\n~
+Module1=Starter
+NumberOfFiles=6
+NumberOfLibraries=4
+NumberOfModules=1
+Version=13.1
+@EndOfDesignText@
+#Region  Project Attributes 
+	#ApplicationLabel: ParquimetroV1
+	#VersionCode: 1
+	#VersionName: 
+	'SupportedOrientations possible values: unspecified, landscape or portrait.
+	#SupportedOrientations: unspecified
+	#CanInstallToExternalStorage: False
+#End Region
+
+#Region  Activity Attributes 
+	#FullScreen: False
+	#IncludeTitle: True
+#End Region
+
+Sub Process_Globals
+	'These global variables will be declared once when the application starts.
+	'These variables can be accessed from all modules.
+	Private xui As XUI
+	Dim Mi_DB As SQL
+End Sub
+
+Sub Globals
+	Dim Mi_Cursor As Cursor
+	Dim TabHost1 As TabHost
+	Private EditTextPatente, EditTextTicket, EditTextDateIni, EditTextDateFin As EditText
+	Private BtnIngreso, BtnListar, BtnGeneraTicket, BtnInforme, calendarIni, calendarFin As Button
+	Private Label1, InfoTicket, LabelActivos, LabelTotal, LabelPorDia As Label
+	Private ListView1, ListView2, ListViewResumen As ListView
+	Private CheckBoxActivos, CheckboxDate As CheckBox
+	
+	Private dialog As B4XDialog
+	Private dateTemplate As B4XDateTemplate
+	Private fechaSeleccionada As String
+
+End Sub
+
+Sub Activity_Create(FirstTime As Boolean)
+	Activity.LoadLayout("main")
+	Activity.Title = "Parquímetro"
+	TabHost1.AddTab("Ingreso", "pantaIngreso")
+	TabHost1.AddTab("Listado", "listaVehiculos")
+	TabHost1.AddTab("Ticket", "pantaTicket")
+	TabHost1.AddTab("Resumen", "pantaResumenTotal")
+	
+	
+	If FirstTime Then
+		'Inicialización de la base de datos
+		Mi_DB.Initialize(File.DirInternal,"ParquimetroV04.db",True)
+		'Creación de una tabla
+		Mi_DB.BeginTransaction
+		Try
+			Mi_DB.ExecNonQuery("CREATE TABLE IF NOT EXISTS Vehiculos (id_dato INTEGER PRIMARY KEY AUTOINCREMENT, fecha TEXT, hora TEXT, patente TEXT, isActive INTEGER)")
+			Mi_DB.ExecNonQuery("CREATE TABLE IF NOT EXISTS Pagos (id_pago INTEGER PRIMARY KEY AUTOINCREMENT, id_dato INTEGER, salida_fecha TEXT, salida_hora TEXT, monto INTEGER, FOREIGN KEY (id_dato) REFERENCES Vehiculos(id_dato))")
+			Mi_DB.TransactionSuccessful
+			ToastMessageShow("Base de datos creada",True)
+		Catch
+			Log("ERROR de Creacion base de datos: "&LastException.Message)
+		End Try
+		Mi_DB.EndTransaction
+	End If
+	
+	dialog.Initialize(Activity)
+	dateTemplate.Initialize
+	dateTemplate.FirstDay = 1
+End Sub
+
+Sub Activity_Resume
+
+End Sub
+
+Sub Activity_Pause (UserClosed As Boolean)
+
+End Sub
+
+
+
+Private Sub BtnIngreso_Click
+	If EditTextPatente.Text<>"" Then
+		'Sentencia de Ingreso del dato del usuario a la base de datos
+		Mi_DB.BeginTransaction
+		Try
+			Dim fechaEntrada, horaEntrada As String
+			Dim dtEntrada As Long = DateTime.Now
+			DateTime.DateFormat = "dd/MM/yyyy"
+			DateTime.TimeFormat = "HH:mm:ss"
+			Log("Fecha: " & DateTime.Date(dtEntrada))
+			Log("Hora: " & DateTime.Time(dtEntrada))
+
+			Log("dtEntrada al INGRESO "&dtEntrada)
+			Mi_DB.ExecNonQuery2("INSERT INTO Vehiculos (fecha, hora, patente, isActive) VALUES (?,?,?,?)", Array As String(DateTime.Date(dtEntrada), DateTime.Time(dtEntrada), EditTextPatente.Text.ToUpperCase,1))
+			Mi_DB.TransactionSuccessful
+			ToastMessageShow("Vehiculo ingresado", False)
+		Catch
+			Log("catch: " & LastException.Message)
+			ToastMessageShow("Error al ingresar", True)
+		End Try
+		Mi_DB.EndTransaction
+		Mi_Cursor = Mi_DB.ExecQuery("SELECT id_dato, fecha, hora, patente FROM Vehiculos WHERE isActive=1 ORDER BY fecha DESC")
+		ListView1.Clear 
+
+		EditTextPatente.Text=""
+		ListView1.AddSingleLine("FECHA        | HORA    | PATENTE")
+		For i = 0 To Mi_Cursor.RowCount - 1
+			Mi_Cursor.Position = i
+			Dim linea As String = Mi_Cursor.GetString("fecha") & "|  " & Mi_Cursor.GetString("hora") & "     | " & Mi_Cursor.GetString("patente")'
+			ListView1.AddSingleLine(linea)
+		Next
+		Mi_Cursor.Close
+	Else
+		ToastMessageShow("Completar todos los datos", True)
+	End If
+End Sub
+
+Private Sub BtnListar_Click
+	ListView2.Clear
+	Try
+		If CheckBoxActivos.Checked Then
+			Mi_Cursor = Mi_DB.ExecQuery("SELECT id_dato, fecha, hora, patente, isActive FROM Vehiculos WHERE isActive = 1 ORDER BY id_dato DESC")
+			ListView2.AddSingleLine("FECHA        | HORA    | PATENTE | Estado")
+			For i = 0 To Mi_Cursor.RowCount - 1
+				Mi_Cursor.Position = i
+				Dim linea As String = Mi_Cursor.GetString("fecha") & "|  " & Mi_Cursor.GetString("hora") & "     | " & Mi_Cursor.GetString("patente") & " |   " & Mi_Cursor.GetString("isActive")
+				ListView2.AddSingleLine(linea)
+			Next
+
+		Else
+			Mi_Cursor = Mi_DB.ExecQuery("SELECT id_dato, fecha, hora, patente, isActive FROM Vehiculos ORDER BY id_dato DESC")
+			ListView2.AddSingleLine("FECHA        | HORA    | PATENTE | Estado")
+			For i = 0 To Mi_Cursor.RowCount - 1
+				Mi_Cursor.Position = i
+				Dim linea As String = Mi_Cursor.GetString("fecha") & "|  " & Mi_Cursor.GetString("hora") & "     | " & Mi_Cursor.GetString("patente") & " |   " & Mi_Cursor.GetInt("isActive")
+				ListView2.AddSingleLine(linea)
+			Next
+		End If
+	Mi_Cursor.Close
+		
+		
+	Catch
+		ToastMessageShow("Error al cargar vehiculos", True)
+	End Try
+End Sub
+
+Private Sub BtnGeneraTicket_Click
+	If EditTextTicket.Text<>"" Then
+		Try
+			Mi_Cursor = Mi_DB.ExecQuery2("SELECT id_dato, fecha, hora FROM Vehiculos WHERE patente = ? AND  isActive = 1 LIMIT 1", _
+                Array As String(EditTextTicket.Text.Trim.ToUpperCase))
+            
+			If Mi_Cursor.RowCount = 0 Then
+				InfoTicket.Text = "Vehículo no encontrado o ya retirado"
+				ToastMessageShow("NO ENCONTRADO", True)
+				Return
+			End If
+			Mi_Cursor.Position = 0
+			Dim fechaEntrada As String = Mi_Cursor.GetString("fecha")
+			Dim horaEntrada As String = Mi_Cursor.GetString("hora")
+			Dim id_dato As Int = Mi_Cursor.GetInt("id_dato")
+
+			Log("Fecha entrada TICKET: " & fechaEntrada)
+			Log("Hora entrada TICKET: " & horaEntrada)
+			DateTime.DateFormat = "dd/MM/yyyy"
+			DateTime.TimeFormat = "HH:mm:ss"
+			
+			Dim desfaseZonaHoraria As Long = 4 * 60* DateTime.TicksPerMinute
+			Dim baseFecha As Long = DateTime.DateParse(fechaEntrada)
+			Dim horaMilis As Long = (DateTime.TimeParse(horaEntrada) Mod DateTime.TicksPerDay) - desfaseZonaHoraria
+
+			Dim dtEntrada As Long = baseFecha + horaMilis
+'			Dim dtEntrada As Long = DateTime.DateParse(fechaEntrada) + DateTime.TimeParse(horaEntrada)
+			Log("d Entrada "&dtEntrada)
+			Dim dtSalida As Long = DateTime.Now
+			Dim minutos As Int = Round((dtSalida - dtEntrada) / DateTime.TicksPerMinute)
+			ToastMessageShow(minutos, True)
+			Log("Entrada: " & DateTime.Date(dtEntrada) & " " & DateTime.Time(dtEntrada))
+			Log("Salida: " & DateTime.Date(dtSalida) & " " & DateTime.Time(dtSalida))
+			Dim montoPago As Int
+			Log(" MIN-utOOOOOOOOOOOOS " & minutos)
+			If minutos <= 15 Then
+				montoPago = 500
+			Else
+				montoPago = 500 + ((minutos - 15) * 30)
+			End If
+            
+			InfoTicket.Text = "                    Parquímetro Austral " & CRLF & _
+							"" & CRLF & _
+							"RUT: 00.000.000-0" & CRLF & _
+							"" & CRLF & _
+							"----------------- DATOS VEHICULO -----------------" & CRLF & _
+							" PATENTE: " & EditTextTicket.Text & CRLF & _
+							"--------------- INGRESO ---------------" & CRLF & _
+							"" & CRLF & _
+							"Fecha : " & fechaEntrada & "  Hora : " & horaEntrada &CRLF & _
+							"" & CRLF & _
+							"----------------- SALIDA -----------------" & CRLF & _
+							"" & CRLF & _
+							"Fecha : " & DateTime.Date(dtSalida) & "  Hora : " & DateTime.Time(dtSalida) &CRLF & _
+							"Tiempo: " & minutos & " minutos"&CRLF & _
+							"Monto: $" & montoPago
+			' Inserta el monto a tabla pagos
+			Mi_DB.ExecNonQuery2("INSERT INTO Pagos (id_dato, salida_fecha, salida_hora, monto) VALUES (?,?,?,?)", Array As Object(id_dato, DateTime.Date(dtSalida), DateTime.Time(dtSalida), montoPago))
+			
+			'Marca vehiculo como retirado (isActive cambia de estado a 0)
+			Mi_DB.ExecNonQuery2("UPDATE Vehiculos SET isActive = 0 WHERE id_dato = ?", Array As Object(id_dato))
+			EditTextTicket.Text=""
+            
+		Catch
+			Log("ERROR EN BtnGeneraTicket: " & LastException.Message)
+			ToastMessageShow("Error al generar el ticket: " & LastException.Message, True)
+		End Try
+	End If
+End Sub
+
+Private Sub CheckBoxDate_CheckedChange(Checked As Boolean)
+	If Checked Then
+		EditTextDateFin.Visible = False
+		calendarFin.Visible = False
+	Else
+		EditTextDateFin.Visible = True
+		calendarFin.Visible = True
+	End If
+End Sub
+
+Private Sub BtnInforme_Click
+	ListViewResumen.Clear
+	LabelTotal.Text = ""
+	Dim fechaInicio As String = EditTextDateIni.Text.Trim
+	Dim fechaFin As String = EditTextDateFin.Text.Trim
+	DateTime.DateFormat = "dd/MM/yyyy"
+	
+	If fechaInicio="" Then
+		ToastMessageShow("Ingrese fecha", True)
+		Return
+	End If
+	Dim totalRecaudado As Int = 0
+	
+	Try
+		'	Dim fechaValida As Long = DateTime.DateParse(fechaBusqueda)
+		If CheckboxDate.Checked Then
+			Mi_Cursor = Mi_DB.ExecQuery2("SELECT v.patente, p.salida_hora, p.monto FROM Pagos p INNER JOIN Vehiculos v ON v.id_dato = p.id_dato WHERE p.salida_fecha = ?", Array As String(fechaInicio))
+		Else
+			If fechaFin = "" Then
+				ToastMessageShow("Ingrese fecha final", True)
+				Return
+			End If
+			Mi_Cursor = Mi_DB.ExecQuery2("SELECT v.patente, p.salida_hora, p.monto FROM Pagos p INNER JOIN Vehiculos v ON v.id_dato = p.id_dato WHERE p.salida_fecha BETWEEN ? AND ?", Array As String(fechaInicio, fechaFin))
+		End If
+		If Mi_Cursor.RowCount = 0 Then
+			ListViewResumen.AddSingleLine("Sin resultados en ese rango")
+		Else 
+			ListViewResumen.AddSingleLine("PATENTE   |  Hora Salida   | Monto ")
+			For i = 0 To Mi_Cursor.RowCount - 1
+				Mi_Cursor.Position = i
+				Dim monto As Int = Mi_Cursor.GetInt("monto")
+				totalRecaudado = totalRecaudado + monto
+				Dim linea As String = Mi_Cursor.GetString("patente") & " | " & _
+										Mi_Cursor.GetString("salida_hora") & " | " & _
+										monto
+				ListViewResumen.AddSingleLine(linea)
+				
+			Next
+			LabelTotal.Text= " Total recaudado: " & totalRecaudado
+			'LabelTotal.Text= "Cantidad de vehiculos: "& cantidadVehiculos & " Total recaudado: " & totalRecaudado
+		End If
+		Mi_Cursor.Close
+	Catch
+		Log(LastException)
+		ToastMessageShow("Error al consultar", True)
+	End Try
+End Sub
+
+
+Private Sub calendarIni_Click
+	fechaSeleccionada = "ini"
+	MostrarCalendario
+End Sub
+
+Private Sub calendarFin_Click
+	fechaSeleccionada = "fin"
+	MostrarCalendario
+End Sub
+
+Private Sub MostrarCalendario
+	Wait For (dialog.ShowTemplate(dateTemplate, "OK", "", "Cancelar")) Complete (Result As Int)
+	If Result = xui.DialogResponse_Positive Then
+		DateTime.DateFormat = "dd/MM/yyyy"
+		Dim fechaElegida As String = DateTime.Date(dateTemplate.Date)
+		If fechaSeleccionada = "ini" Then
+			EditTextDateIni.Text = fechaElegida
+		Else
+			EditTextDateFin.Text = fechaElegida
+		End If
+	End If
+End Sub
