@@ -1,0 +1,9 @@
+Este fichero contiene las variables renombradas con los originales.
+v5=verifycheckboxes
+v6=mp
+v7=p
+v0=kg
+vv1=altura
+vv2=imc
+vv3=calculaimc
+vv4=edittext1

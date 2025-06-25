@@ -1,0 +1,378 @@
+﻿Build1=Default,com.tabhost
+File1=bien.jpg
+File10=obeso.png
+File11=page1.bal
+File12=page2.bal
+File13=page3.bal
+File14=paisajesSur.bal
+File15=panta01.bal
+File16=pantaCalculadora.bal
+File17=pantaIMCSinFiltro.bal
+File18=pantaPromedio.bal
+File19=Perro-con-pulgas.jpg
+File2=flaco.jpg
+File20=perros1.jpg
+File21=perros2.jpg
+File22=promPaes.bal
+File23=transparente.png
+File3=gordo.jpg
+File4=ico1.png
+File5=ico2.png
+File6=ico3.png
+File7=imagenes-de-amor-12.jpg
+File8=imagenes-de-amor-nadie.jpg
+File9=main.bal
+FileGroup1=Default Group
+FileGroup10=Default Group
+FileGroup11=Default Group
+FileGroup12=Default Group
+FileGroup13=Default Group
+FileGroup14=Default Group
+FileGroup15=Default Group
+FileGroup16=Default Group
+FileGroup17=Default Group
+FileGroup18=Default Group
+FileGroup19=Default Group
+FileGroup2=Default Group
+FileGroup20=Default Group
+FileGroup21=Default Group
+FileGroup22=Default Group
+FileGroup23=Default Group
+FileGroup3=Default Group
+FileGroup4=Default Group
+FileGroup5=Default Group
+FileGroup6=Default Group
+FileGroup7=Default Group
+FileGroup8=Default Group
+FileGroup9=Default Group
+Group=Default Group
+Library1=core
+ManifestCode='This code will be applied to the manifest file during compilation.~\n~'You do not need to modify it in most cases.~\n~'See this link for for more information: http://www.b4x.com/forum/showthread.php?p=78136~\n~AddManifestText(~\n~<uses-sdk android:minSdkVersion="26" />~\n~<supports-screens android:largeScreens="true" ~\n~    android:normalScreens="true" ~\n~    android:smallScreens="true" ~\n~    android:anyDensity="true"/>)~\n~SetApplicationAttribute(android:icon, "@drawable/icon")~\n~SetApplicationAttribute(android:label, "$LABEL$")~\n~'End of default text.~\n~
+NumberOfFiles=23
+NumberOfLibraries=1
+NumberOfModules=0
+Version=13.1
+@EndOfDesignText@
+#Region Module Attributes
+	#FullScreen: False
+	#IncludeTitle: True
+	#ApplicationLabel: TabHost V2
+	#VersionCode: 1
+	#VersionName: 
+	#SupportedOrientations: unspecified
+	#CanInstallToExternalStorage: True
+#End Region
+
+Sub Process_Globals
+	
+End Sub
+
+Sub Globals
+	Dim TabHost1 As TabHost
+	Dim txtName, txtAnimal, txtColor As EditText
+	Dim imageview1, imageview1sf, imagePaisaje As ImageView
+	Dim mp As MediaPlayer
+	Private listViewPaisaje As ListView
+	Private edittext1, edittext2, edittext3 As EditText
+	Private btnPromedio As Button
+	Private Spinner1, Spinner2, Spinner3, Spinnerpaes As Spinner
+	Private Checkbox1, Checkbox2 As CheckBox
+	Private edittext1, edittext2, edittext3, edittext2sf, edittext3sf As EditText
+	Private txtPonderado1, txtPonderado2, txtPonderado3, paes1, paes2, paes3, paes4, paes5 As EditText
+	Private label1, label2, label2sf,label3sf, labelPromedio, labelPaisaje, prompaeslabel As Label
+	Private kg, altura As Double
+	Private imc As Double
+	Private btn1, btnsf, calcprom As Button
+	Private p As Int
+	
+End Sub
+
+Sub Activity_Create(FirstTime As Boolean)
+	Activity.LoadLayout("main")
+	Dim bmp1, bmp2,bmp3,bmp4 As Bitmap
+	Dim k As Int
+	bmp1 = LoadBitmap(File.DirAssets, "ico1.png")
+	bmp2 = LoadBitmap(File.DirAssets, "ico2.png")
+	bmp3 = LoadBitmap(File.DirAssets, "ico3.png")
+	bmp4 = LoadBitmap(File.DirAssets, "transparente.png")
+
+	
+	
+	'TabHost1.AddTabWithIcon ("Nombre", bmp1,bmp2, "page1") 'load the layout file of each page
+	TabHost1.AddTab("Calcula Prom", "pantaPromedio")
+	TabHost1.AddTab("IMC", "pantaCalculadora")
+	TabHost1.AddTab("IMCSinFiltro", "pantaIMCSinFiltro")
+	TabHost1.AddTab("Paisajes", "paisajesSur")
+	TabHost1.AddTab("PAES", "promPaes")
+	Spinner1.Add("20")
+	Spinner1.Add("30")
+	Spinner1.Add("50")
+	Spinner2.Add("20")
+	Spinner2.Add("30")
+	Spinner2.Add("50")
+	Spinner3.Add("20")
+	Spinner3.Add("30")
+	Spinner3.Add("50")
+	VerifyCheckboxes
+	If FirstTime Then
+		mp.Initialize
+	End If
+	k=1
+	Do While k<= 6
+		listViewPaisaje.AddSingleLine("Ciudad " & k)
+		k=k+1
+	Loop
+
+
+	
+End Sub
+Sub Activity_Pause (Finishing As Boolean)
+	
+End Sub
+Sub Activity_Resume
+
+End Sub
+Sub btnNext1_Click
+	TabHost1.CurrentTab = 1 'move to next tab
+End Sub
+
+Sub btnNext2_Click
+	TabHost1.CurrentTab = 2 'move to next tab
+End Sub
+
+Public Sub calculaIMC ()
+	
+End Sub
+
+Private Sub CheckBox1_CheckedChange(Checked As Boolean)
+	If Checked Then 
+		Checkbox2.Checked = False
+		Spinner1.Visible= False
+		Spinner2.Visible= False
+		Spinner3.Visible= False
+		txtPonderado1.Visible = True
+		txtPonderado2.Visible = True
+		txtPonderado3.Visible = True
+		labelPromedio.Visible = True
+		btnPromedio.Visible = True
+	Else 
+		VerifyCheckboxes
+	End If
+End Sub
+Private Sub CheckBox2_CheckedChange(Checked As Boolean)
+	If Checked Then 
+		Checkbox1.Checked = False
+		Spinner1.Visible= True
+		Spinner2.Visible= True
+		Spinner3.Visible= True
+		txtPonderado1.Visible = True
+		txtPonderado2.Visible = True
+		txtPonderado3.Visible = True
+		labelPromedio.Visible = True
+		btnPromedio.Visible = True
+	Else 
+		VerifyCheckboxes
+	End If
+End Sub
+
+Private Sub VerifyCheckboxes()
+	If Checkbox1.Checked = False And Checkbox2.Checked = False Then
+		Spinner1.Visible= False
+		Spinner2.Visible= False
+		Spinner3.Visible= False
+		txtPonderado1.Visible = False
+		txtPonderado2.Visible = False
+		txtPonderado3.Visible = False
+		labelPromedio.Visible = False
+		btnPromedio.Visible = False
+	End If
+End Sub
+
+Private Sub btnPromedio_Click
+	
+	If IsNumber(txtPonderado1.text) And IsNumber(txtPonderado2.text) And IsNumber(txtPonderado3.text) Then
+		If (txtPonderado1.text > 0) And (txtPonderado2.text > 0) And (txtPonderado3.text > 0) Then
+			If Checkbox1.Checked = True And Checkbox2.Checked = False Then
+				labelPromedio.text = NumberFormat(((txtPonderado1.text + txtPonderado2.text + txtPonderado3.text)/3), 1, 2)
+			Else If Checkbox2.Checked = True And Checkbox1.Checked = False Then
+				If (Spinner1.SelectedItem + Spinner2.SelectedItem + Spinner3.SelectedItem) = 100 Then
+					labelPromedio.text = NumberFormat(((txtPonderado1.text*Spinner1.SelectedItem + txtPonderado2.text*Spinner2.SelectedItem + txtPonderado3.text*Spinner3.SelectedItem)/100), 1, 2)
+				Else
+					labelPromedio.Text = "Suma de % debe ser 100"
+				End If
+				
+			End If
+		End If
+	Else
+		labelPromedio.Text = "Notas deben ser numéricas"
+	End If
+End Sub
+
+
+Private Sub btn1_Click
+	Dim p As Int
+	If IsNumber(edittext2.Text) = False Or IsNumber(edittext3.Text) = False Then
+		ToastMessageShow("Debes ingresar números válidos", True)
+		Return
+	End If
+	
+	kg = edittext2.Text
+	altura = edittext3.Text
+	
+	If altura <= 0 Then
+		ToastMessageShow("La altura debe ser mayor que 0", True)
+		Return
+	End If
+	
+	imc = kg / (altura * altura)
+
+	If imc < 18.5 Then
+		p = 0
+	Else If imc <= 24.9 Then
+		p = 1
+	Else If imc <= 29.9 Then
+		p = 2
+	Else
+		p = 3
+	End If
+	label2.Text = "IMC: " & NumberFormat(imc, 1, 2)
+	Select p
+		Case 0
+			imageview1.Bitmap = LoadBitmap(File.DirAssets, "flaco.jpg")
+		Case 1
+			imageview1.Bitmap = LoadBitmap(File.DirAssets, "bien.jpg")
+		Case 2
+			imageview1.Bitmap = LoadBitmap(File.DirAssets, "gordo.jpg")
+		Case 3
+			imageview1.Bitmap = LoadBitmap(File.DirAssets, "obeso.png")
+	End Select
+End Sub
+
+
+
+
+Sub btnDone_Click
+	Dim sb As StringBuilder
+	sb.Initialize
+	sb.Append("Usted a ingresado:").Append(CRLF)
+	sb.Append("Nombre ").Append(txtName.Text).Append(CRLF)
+	sb.Append("Color: ").Append(txtColor.Text).Append(CRLF)
+	sb.Append("Animal: ").Append(txtAnimal.Text)
+	Msgbox(sb.ToString, "")
+	  imageview1.Bitmap =LoadBitmap(File.DirAssets,"transparente.png")
+End Sub
+
+Sub TabHost1_TabChanged
+	'Activity.Title = "Current Tab = " & TabHost1.CurrentTab
+	Dim p As Int
+	p = TabHost1.CurrentTab
+	Select p
+		Case 0
+			Activity.Title = "Calculadora de Promedio"
+		Case 1
+			Activity.Title = "Calculadora de IMC"
+		Case 2
+			Activity.Title = "Mejor usa la otra..."
+		Case 3
+			Activity.Title = "Ciudades del Sur de Chile"
+		Case 4
+			Activity.Title = "Promedio 5 PAES"
+	End Select
+		
+		
+End Sub
+	
+
+
+Private Sub listViewPaisaje_ItemClick (Position As Int, Value As Object)
+	Dim pos = Position
+	Select pos
+		Case 0
+			imagePaisaje.Bitmap = LoadBitmap(File.DirAssets, "osorno.jpg")
+			labelPaisaje.Text = "Volcán Osorno"
+		Case 1
+			imagePaisaje.Bitmap = LoadBitmap(File.DirAssets, "puertovaras.jpg")
+			labelPaisaje.Text = "Ciudad de Puerto Varas"
+		Case 2
+			imagePaisaje.Bitmap = LoadBitmap(File.DirAssets, "puertonatales.jpg")
+			labelPaisaje.Text = "Puerto Natales"
+		Case 3
+			imagePaisaje.Bitmap = LoadBitmap(File.DirAssets, "torresdelpaine.jpg")
+			labelPaisaje.Text = "Torres del Paine"
+		Case 4
+			imagePaisaje.Bitmap = LoadBitmap(File.DirAssets, "huilohuilo.jpg")
+			labelPaisaje.Text = "Río Huilo-Huilo"
+		Case 5
+			imagePaisaje.Bitmap = LoadBitmap(File.DirAssets, "patagonia.jpg")
+			labelPaisaje.Text = "Patagonia"
+	End Select
+End Sub
+
+
+
+Private Sub btnsf_Click
+	Dim psf As Int
+	If IsNumber(edittext2sf.Text) = False Or IsNumber(edittext3sf.Text) = False Then
+		ToastMessageShow("Debes ingresar números válidos", True)
+		Return
+	End If
+	
+	kg = edittext2sf.Text
+	altura = edittext3sf.Text
+	
+	If altura <= 0 Then
+		ToastMessageShow("La altura debe ser mayor que 0", True)
+		Return
+	End If
+	
+	imc = kg / (altura * altura)
+
+	If imc < 18.5 Then
+		psf = 0
+	Else If imc <= 24.9 Then
+		psf = 1
+	Else If imc <= 29.9 Then
+		psf = 2
+	Else
+		psf = 3
+	End If
+	label2sf.Text = "IMC: " & NumberFormat(imc, 1, 2)
+	Select psf
+		Case 0
+			imageview1sf.Bitmap = LoadBitmap(File.DirAssets, "skinny.gif")
+			label3sf.Text = ("FALTAN CAZUELAS!!")
+			mp.Stop
+			mp.Load(File.DirAssets, "llegoelpavo.mp3")
+			mp.Play
+		Case 1
+			imageview1sf.Bitmap = LoadBitmap(File.DirAssets, "fine.gif")
+			label3sf.Text = ("Peso adecuado, por ahora...")
+			mp.Stop
+		Case 2
+			imageview1sf.Bitmap = LoadBitmap(File.DirAssets, "yougordo.gif")
+			label3sf.Text = ("Vamos... Estamos gorditos, he")
+			mp.Stop
+		Case 3
+			imageview1sf.Bitmap = LoadBitmap(File.DirAssets, "obesidad.jpg")
+			label3sf.Text = ("Recomiendo bajar ahora!!!")
+			mp.Stop
+			mp.Load(File.DirAssets, "oyegelda.mp3")
+			mp.Play
+	End Select
+End Sub
+
+Private Sub calcprom_Click
+	Dim rs As Int
+	If IsNumber(paes1.Text) And IsNumber(paes2.Text) And IsNumber(paes3.Text) And IsNumber(paes4.Text) And IsNumber(paes5.Text) Then
+		
+		rs = (paes1.Text + paes2.Text + paes3.Text + paes4.Text + paes5.Text)/5
+		
+		prompaeslabel.Text = rs
+		Spinnerpaes.Add(paes1.Text)
+		Spinnerpaes.Add(paes2.Text)
+		Spinnerpaes.Add(paes3.Text)
+		Spinnerpaes.Add(paes4.Text)
+		Spinnerpaes.Add(paes5.Text)
+		
+	End If
+End Sub

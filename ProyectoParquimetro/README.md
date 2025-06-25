@@ -3,6 +3,7 @@ Desarrollo de Parquímetro en Android
 Se desarrolla una app en B4A, la cual utiliza SQLite para persistencia de datos.
 
 tablas de db: 
+
     - vehiculos 
     - pagos
     - usuarios
